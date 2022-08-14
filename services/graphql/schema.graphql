@@ -1,0 +1,22 @@
+type AdvertisingBudgetEntry {
+  Month: String!
+  Impressions: Float!
+  Budget: Float!
+}
+
+input AdvertisingBudgetInput {
+  Month: String!
+  Impressions: Float!
+  Budget: Float!
+}
+
+type Query {
+  getAllAdvertisingBudgetEntries: [AdvertisingBudgetEntry]
+  getAdvertisingBudgetEntryByMonth(entryMonth: String!): AdvertisingBudgetEntry
+}
+
+type Mutation {
+  createAdvertisingBudgetEntry(
+    entry: AdvertisingBudgetInput!
+  ): AdvertisingBudgetEntry
+}
