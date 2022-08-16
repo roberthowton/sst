@@ -8,7 +8,8 @@ const createAdvertisingBudgetEntry = async (
 ): Promise<AdvertisingBudgetEntry> => {
   const params = {
     Item: entry as Record<string, unknown>,
-    TableName: process.env.ADVERTISING_BUDGET_TABLE as string,
+    TableName:
+      (process.env.ADVERTISING_BUDGET_TABLE as string) ?? 'AdvertisingBudget',
   };
   await dynamoDb.put(params).promise();
 

@@ -1,4 +1,11 @@
-import { StackContext, Table, AppSyncApi } from '@serverless-stack/resources';
+import {
+  StackContext,
+  Table,
+  AppSyncApi,
+  EventBus,
+  Api,
+} from '@serverless-stack/resources';
+import { writeFromCsv } from '../services/functions/writeFromCsv';
 
 export function MyStack({ stack }: StackContext) {
   const advertisingBudgetTable = new Table(stack, 'AdvertisingBudget', {
@@ -17,7 +24,8 @@ export function MyStack({ stack }: StackContext) {
     defaults: {
       function: {
         environment: {
-          ADVERTISING_BUDGET_TABLE: advertisingBudgetTable.tableName,
+          ADVERTISING_BUDGET_TABLE:
+            advertisingBudgetTable.tableName ?? 'AdvertisingBudget',
         },
       },
     },
@@ -31,20 +39,45 @@ export function MyStack({ stack }: StackContext) {
     },
   });
   api.attachPermissions([advertisingBudgetTable]);
+
+  const bus = new EventBus(stack, 'UpdateAdBudgetTable', {
+    rules: {
+      rule1: {
+        pattern: {
+          source: ['updateAdBudgetTable'],
+          detailType: ['AdvertisingBudgetEntry'],
+        },
+        targets: {
+          mutate: 'functions/update.handler',
+        },
+      },
+    },
+  });
+
+  const busApi = new Api(stack, 'BusApi', {
+    defaults: {
+      function: {
+        environment: {
+          busName: bus.eventBusName,
+        },
+      },
+    },
+    routes: {
+      'POST /graphql': 'functions/updateAdBudgetTable.handler',
+    },
+  });
+
+  busApi.attachPermissions([bus, advertisingBudgetTable]);
+  bus.attachPermissions([advertisingBudgetTable]);
+
   stack.addOutputs({
     ApiId: api.apiId,
     ApiKey: api.cdk.graphqlApi.apiKey as string,
     ApiUrl: api.url,
     ApiArn: api.apiArn,
     ApiData: api.cdk.graphqlApi.graphqlUrl,
+    BusApiEndpoint: busApi.url,
   });
 
-  // const api = new Api(stack, 'api', {
-  //   routes: {
-  //     'GET /': 'functions/lambda.handler',
-  //   },
-  // });
-  // stack.addOutputs({
-  //   ApiEndpoint: api.url,
-  // });
+  writeFromCsv();
 }
